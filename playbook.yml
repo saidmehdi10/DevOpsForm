@@ -1,0 +1,77 @@
+# Launch instances, runs some tasks
+# and then terminate them
+
+- name: Create an instance
+  hosts: localhost
+  gather_facts: False
+  vars:
+    key_name: MyNVirginiaKey
+    instance_type: t2.micro
+    security_group: ssh-http
+    image: ami-97785bed
+    region: us-east-1
+  tasks:
+    - name: Launch instance
+      ec2:
+         key_name: "{{ key_name }}"
+         group: "{{ security_group }}"
+         instance_type: "{{ instance_type }}"
+         image: "{{ image }}"
+         wait: true
+         region: "{{ region }}"
+      register: ec2
+
+    - name: Add new instance to host group
+      add_host:
+        hostname: "{{ item.public_ip }}"
+        groupname: launched
+      with_items: "{{ ec2.instances }}"
+
+    - name: Wait for SSH to come up
+      wait_for:
+        host: "{{ item.public_dns_name }}"
+        port: 22
+        delay: 60
+        timeout: 320
+        state: started
+      with_items: "{{ ec2.instances }}"
+
+- name: Configure instance(s)
+  hosts: launched
+  gather_facts: False
+  remote_user: ec2-user
+  become: false
+  #vars:
+  #  ansible_ssh_private_key_file: MyNVirginiaKey.pem
+  tasks:
+    - name: Uninstall OpenJDK 7
+      yum:
+        name: "{{ item }}"
+        state: removed
+      with_items:
+        - java-1.7.0-openjdk
+        - java-1.7.0-openjdk-devel
+      become: true
+
+    - name: Install OpenJDK 8
+      yum:
+        name: "{{ item }}"
+        state: present
+      with_items:
+        - java-1.8.0-openjdk
+        - java-1.8.0-openjdk-devel
+      become: true
+
+    - name: Deploy package
+      copy:
+        src: "{{ item }}"
+        dest: /home/ec2-user
+        owner: ec2-user
+        group: ec2-user
+        mode: 0777
+      with_items:
+        - target/stack-tech-0.1.0.jar
+        - config/startup.sh
+
+    - name: Start service
+      command: "sh startup.sh"
