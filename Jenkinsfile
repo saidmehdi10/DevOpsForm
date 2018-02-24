@@ -44,15 +44,7 @@ pipeline {
           }
         }
 
-        stage ('Deploy to EC2') {
-          steps {
-            wrap([$class: 'AnsiColorBuildWrapper', colorMapName: "xterm"]) {
-              ansiblePlaybook(
-                playbook: 'playbook.yml',
-                colorized: true)
-            }
-          }
-        }
+      
 
     }
 }
