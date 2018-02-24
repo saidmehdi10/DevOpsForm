@@ -9,7 +9,7 @@ pipeline {
     stages {
         stage ('Initialize') {
             steps {
-                cmd '''
+                bat '''
                     echo "PATH = ${PATH}"
                     echo "M2_HOME = ${M2_HOME}"
                 '''
@@ -33,7 +33,7 @@ pipeline {
         stage ('SonarQube Analysis') {
           steps{
             withSonarQubeEnv('local-server') {
-                sh 'mvn org.sonarsource.scanner.maven:sonar-maven-plugin:3.2:sonar'
+                bat 'mvn org.sonarsource.scanner.maven:sonar-maven-plugin:3.2:sonar'
             }
           }
 
